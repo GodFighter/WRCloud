@@ -9,12 +9,13 @@
 import UIKit
 import WRCloud
 
-class ViewController: UIViewController {
+class ViewController: UIViewController, WRCloudManagerDelegate {
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        print(WRCloudManager.shared.path.root)
+        WRCloudManager.shared.delegate = self
+        WRCloudManager.shared.open()
     }
 
     override func didReceiveMemoryWarning() {
@@ -23,4 +24,18 @@ class ViewController: UIViewController {
     }
 
 }
+
+//MARK:-
+fileprivate typealias ViewController_WRCloudManagerDelegate = ViewController
+extension ViewController_WRCloudManagerDelegate {
+    func cloudManager(openSuccess manager: WRCloudManager) {
+        let filePath = Bundle.main.path(forResource: "README", ofType: "md")
+        WRCloudManager.shared.save(filePath)
+    }
+    
+    func cloudManager(_ manager: WRCloudManager, catch error: WRCloudManager.WRCloudError) {
+        
+    }
+}
+
 

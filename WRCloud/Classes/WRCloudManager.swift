@@ -10,6 +10,7 @@ import UIKit
 
 public protocol WRCloudManagerDelegate: class {
     func cloudManager(_ manager: WRCloudManager, catch error:WRCloudManager.WRCloudError)
+    func cloudManager(openSuccess manager: WRCloudManager)
 }
 
 public class WRCloudManager: NSObject {
@@ -45,6 +46,17 @@ public class WRCloudManager: NSObject {
 
     public var path = Path()
     public weak var delegate: WRCloudManagerDelegate?
+    
+    private var _document: WRDocument?
+    public var document: WRDocument? {
+        guard let path = self.path.root else {
+            return nil
+        }
+        if _document == nil {
+            _document = WRDocument.init(fileURL: path)
+        }
+        return _document
+    }
     
     var folders:[WRCloudFolder] = []
     var files:[WRCloudFile] = []
@@ -90,7 +102,29 @@ private extension WRCloudManager_Private {
 //MARK:-
 fileprivate typealias WRCloudManager_Public = WRCloudManager
 public extension WRCloudManager_Public {
-    func save(file path: String) throws {
+    func save(_ filePath: String?, _ folder: WRCloudFolder? = WRCloudManager.shared.document?.rootFolder) {
+        guard let path = filePath, (path as NSString).lastPathComponent.count > 0, let targetFolder = folder else {
+            return
+        }
         
+        let options = folder?.fileWrapper.fileWrappers?.keys.filter({ (name) -> Bool in
+            return name == (path as NSString).lastPathComponent
+        }).count == 0 ? FileWrapper.ReadingOptions.withoutMapping : FileWrapper.ReadingOptions.withoutMapping
+        
+//        let childFile = FileWrapper(url: <#T##URL#>, options: <#T##FileWrapper.ReadingOptions#>)
+//        targetFolder.fileWrapper.addFileWrapper(<#T##child: FileWrapper##FileWrapper#>)
+        
+    }
+    
+    func open() {
+
+        document!.open { (finished) in
+            DispatchQueue.main.async { [weak self]  in
+                if let `self` = self {
+                    self.delegate?.cloudManager(openSuccess: self)
+                }
+            }
+        }
+
     }
 }
