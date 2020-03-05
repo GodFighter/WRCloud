@@ -1,0 +1,11 @@
+use_frameworks!
+
+target 'WRCloud_Example' do
+  pod 'WRCloud', :path => '../'
+
+  target 'WRCloud_Tests' do
+    inherit! :search_paths
+
+    
+  end
+end
