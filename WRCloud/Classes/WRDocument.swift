@@ -12,7 +12,12 @@ public class WRDocument: UIDocument {
     public var rootFolder: WRCloudFolder? = nil
     
     public override func contents(forType typeName: String) throws -> Any {
-        return ""
+
+        guard let path = rootFolder?.path else {
+            return FileWrapper.init(directoryWithFileWrappers: [:])
+        }
+        
+        return rootFolder?.fileWrapper
     }
 
     public override func load(fromContents contents: Any, ofType typeName: String?) throws {
@@ -23,8 +28,15 @@ public class WRDocument: UIDocument {
         if rootFolder == nil {
             rootFolder = WRCloudFolder(WRCloudManager.shared.path.root!.path, file: fileWrapper)
         }
-
+        
+        for var wrapper in (rootFolder?.fileWrapper.fileWrappers!.values)! {
+            
+        }
+        
         rootFolder?.parse(fileWrapper)
     }
     
+    open override func save(to url: URL, for saveOperation: UIDocument.SaveOperation, completionHandler: ((Bool) -> Void)? = nil) {
+        
+    }
 }

@@ -22,6 +22,8 @@ public class WRCloudManager: NSObject {
         case permissionFailure
         case createFolderFailure
         case fileNotExist
+        case folderIsExist
+        case folderNotExist
     }
 
     public class Path {
@@ -58,8 +60,9 @@ public class WRCloudManager: NSObject {
         return _document
     }
     
-    var folders:[WRCloudFolder] = []
-    var files:[WRCloudFile] = []
+    private let GCD_semaphore = DispatchSemaphore.init(value: 0)
+    private let GCD_queue_group = DispatchGroup.init()
+
 }
 
 //MARK:-
@@ -102,29 +105,78 @@ private extension WRCloudManager_Private {
 //MARK:-
 fileprivate typealias WRCloudManager_Public = WRCloudManager
 public extension WRCloudManager_Public {
-    func save(_ filePath: String?, _ folder: WRCloudFolder? = WRCloudManager.shared.document?.rootFolder) {
-        guard let path = filePath, (path as NSString).lastPathComponent.count > 0, let targetFolder = folder else {
-            return
-        }
-        
-        let options = folder?.fileWrapper.fileWrappers?.keys.filter({ (name) -> Bool in
-            return name == (path as NSString).lastPathComponent
-        }).count == 0 ? FileWrapper.ReadingOptions.withoutMapping : FileWrapper.ReadingOptions.withoutMapping
-        
-//        let childFile = FileWrapper(url: <#T##URL#>, options: <#T##FileWrapper.ReadingOptions#>)
-//        targetFolder.fileWrapper.addFileWrapper(<#T##child: FileWrapper##FileWrapper#>)
-        
+    func create(folder name: String, superFolder: WRCloudFolder? = nil) {
+        DispatchQueue.global().async(group: GCD_queue_group, execute: DispatchWorkItem.init(block: { [weak self] in
+            guard let `self` = self else {
+                return
+            }
+            self.GCD_semaphore.wait()
+
+            let targetFolder = superFolder == nil ? WRCloudManager.shared.document?.rootFolder : superFolder
+            guard let folder = targetFolder else {
+                return
+            }
+            
+            folder.save(folder: name)
+        }))
     }
     
-    func open() {
-
-        document!.open { (finished) in
-            DispatchQueue.main.async { [weak self]  in
-                if let `self` = self {
-                    self.delegate?.cloudManager(openSuccess: self)
-                }
+    func save(_ filePath: String?, _ folder: WRCloudFolder? = nil) {
+        DispatchQueue.global().async(group: GCD_queue_group, execute: DispatchWorkItem.init(block: { [weak self] in
+            guard let `self` = self else
+            {
+                return
             }
-        }
+            self.GCD_semaphore.wait()
 
+            guard let path = filePath, (path as NSString).lastPathComponent.count > 0 else
+            {
+                return
+            }
+            
+            let superFolder = folder == nil ? WRCloudManager.shared.document?.rootFolder : folder
+            guard let targetFolder = superFolder else {
+                self.delegate?.cloudManager(self, catch: .folderNotExist)
+                return
+            }
+
+            targetFolder.save(file: path)
+        }))
+    }
+    
+    func open()
+    {
+        DispatchQueue.global().async(group: GCD_queue_group, execute: DispatchWorkItem.init(block: { [weak self] in
+            guard let `self` = self, let document = self.document else {
+                return
+            }
+            
+            document.open { (finished) in
+                DispatchQueue.main.sync { [weak self]  in
+                    if let `self` = self
+                    {
+                        self.delegate?.cloudManager(openSuccess: self)
+                    }
+                }
+                
+                document.enableEditing()
+//                document.updateChangeCount(.done)
+//                document.close(completionHandler: nil)
+                self.GCD_semaphore.signal()
+            }
+        }))
+    }
+    
+    func close() {
+//        DispatchQueue.global().async(group: GCD_queue_group, execute: DispatchWorkItem.init(block: { [weak self] in
+//            guard let `self` = self, let document = self.document else {
+//                return
+//            }
+//
+////            self.GCD_semaphore.wait()
+//            document.close { (finished) in
+//                
+//            }
+//        }))
     }
 }
