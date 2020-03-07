@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		15EE27FEFC7BB414DD222909 /* Pods_WRCloud_Tests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3998B16B3CB8B7E9B6CDE36F /* Pods_WRCloud_Tests.framework */; };
+		56369FDB2413410E0068CA1A /* README.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 56369FDA2413410E0068CA1A /* README.jpg */; };
 		607FACD61AFB9204008FA782 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 607FACD51AFB9204008FA782 /* AppDelegate.swift */; };
 		607FACD81AFB9204008FA782 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 607FACD71AFB9204008FA782 /* ViewController.swift */; };
 		607FACDB1AFB9204008FA782 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 607FACD91AFB9204008FA782 /* Main.storyboard */; };
@@ -31,6 +32,7 @@
 /* Begin PBXFileReference section */
 		3998B16B3CB8B7E9B6CDE36F /* Pods_WRCloud_Tests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_WRCloud_Tests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		4C97ABEDD18AC1DCEF2C2098 /* Pods-WRCloud_Tests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WRCloud_Tests.release.xcconfig"; path = "Target Support Files/Pods-WRCloud_Tests/Pods-WRCloud_Tests.release.xcconfig"; sourceTree = "<group>"; };
+		56369FDA2413410E0068CA1A /* README.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = README.jpg; path = ../../../../Desktop/README.jpg; sourceTree = "<group>"; };
 		607FACD01AFB9204008FA782 /* WRCloud_Example.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WRCloud_Example.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		607FACD41AFB9204008FA782 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		607FACD51AFB9204008FA782 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -147,6 +149,7 @@
 				66B28FAE350DCEE977934BD9 /* WRCloud.podspec */,
 				6FAFF57951D265ED77A055C9 /* README.md */,
 				E6F7D617097743CF4385E7C5 /* LICENSE */,
+				56369FDA2413410E0068CA1A /* README.jpg */,
 			);
 			name = "Podspec Metadata";
 			sourceTree = "<group>";
@@ -251,6 +254,7 @@
 			files = (
 				BB77DE3D2410958F00F7B397 /* README.md in Resources */,
 				607FACDB1AFB9204008FA782 /* Main.storyboard in Resources */,
+				56369FDB2413410E0068CA1A /* README.jpg in Resources */,
 				607FACE01AFB9204008FA782 /* LaunchScreen.xib in Resources */,
 				607FACDD1AFB9204008FA782 /* Images.xcassets in Resources */,
 			);

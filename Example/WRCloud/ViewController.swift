@@ -15,21 +15,34 @@ class ViewController: UIViewController, WRCloudManagerDelegate {
         super.viewDidLoad()
 
         WRCloudManager.shared.delegate = self
-        WRCloudManager.shared.open()
+        
+//        WRCloudManager.shared.d
+        
+//        WRCloudManager.open { (folder) in
+//
+//        }
+        
+//        WRCloudManager.shared.open()
 //        WRCloudManager.shared.create(folder: "Image")
-//        let filePath = Bundle.main.path(forResource: "README", ofType: "md")
+//        let filePath = Bundle.main.path(forResource: "README", ofType: "jpg")
 //        WRCloudManager.shared.save(filePath)
         
-        if let url = WRCloudManager.shared.path.root?.appendingPathComponent("README.md") {
-            do {
-                let data = try Data(contentsOf: url)
-                let string = String(data: data, encoding: .utf8)
-                print(string as Any)
-            } catch let error {
-                print(error)
-            }
-
-        }
+//        let doc = WRDocument.init(fileURL: WRCloudManager.shared.path.root!)
+//        doc.open { (success) in
+//            if success {
+//                if let url = WRCloudManager.shared.path.root?.appendingPathComponent("README/README.md") {
+//                    do {
+//                        let data = try Data(contentsOf: url)
+//                        let string = String(data: data, encoding: .utf8)
+//                        print(string as Any)
+//                    } catch let error {
+//                        print(error)
+//                    }
+//
+//                }
+//            }
+//        }
+        
         
         
     }
