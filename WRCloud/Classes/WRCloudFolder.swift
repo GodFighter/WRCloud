@@ -11,7 +11,7 @@ import UIKit
 private let WRCloudResourceName = ".icloud"
 
 //MARK:-
-public class WRCloudFile {
+class WRCloudFile {
     var name: String
     var fullName: String
     var url: URL
@@ -33,7 +33,7 @@ public class WRCloudFile {
 //MARK:-
 public class WRCloudFolder {
     var name: String
-    var url: URL
+    public var url: URL
     var fileWrapper : FileWrapper
     
     var contents: [Any] = []        //内容数组
@@ -41,10 +41,6 @@ public class WRCloudFolder {
 
     weak var folder: WRCloudFolder? = nil
     
-    var isRoot: Bool {
-        return folder == nil
-    }
-
     init(_ url: URL, file: FileWrapper, superFolder: WRCloudFolder?) {
         self.url = url
         self.name = ((url.path as NSString).lastPathComponent as NSString).deletingPathExtension
@@ -52,108 +48,37 @@ public class WRCloudFolder {
         self.folder = superFolder
     }
     
-//    func save(folder name: String) {
-//        guard !self.isExist(target: name) else {
-//            WRCloudManager.shared.delegate?.cloudManager(WRCloudManager.shared, catch: .folderIsExist)
-//            return
-//        }
-//
-//        let cloudFolderUrl = URL(fileURLWithPath: path).appendingPathComponent(name)
-//        let folderWrapper = FileWrapper.init(directoryWithFileWrappers: [:])
-//        folderWrapper.preferredFilename = name
-//        self.fileWrapper.addFileWrapper(folderWrapper)
-//
-//        do {
-//            try folderWrapper.write(to: cloudFolderUrl, options: FileWrapper.WritingOptions.withNameUpdating, originalContentsURL: nil)
-//        } catch let error as NSError {
-//            print(error)
-//        }
-//    }
-    
-    func save(file path: String) {
-//        let originalUrl = URL(fileURLWithPath: path)
-//        let fullName = (path as NSString).lastPathComponent
-//        let cloudFileUrl = URL(fileURLWithPath: self.path).appendingPathComponent(fullName)
-//        debugPrint(cloudFileUrl)
-//
-//
-////        do {
-////            try FileManager.default.copyItem(at: originalUrl, to: cloudFileUrl)
-////        } catch let error {
-////            print(error)
-////        }
-//
-//
-//
-//        do {
-//            let data = try Data.init(contentsOf: originalUrl)
-//            let newFileWrapper = FileWrapper.init(regularFileWithContents: data)
-//            newFileWrapper.preferredFilename = fullName
-//            if self.isExist(target: fullName)
-//            {
-//                let deleteFile = self.fileWrapper.fileWrappers?.filter({ (info) -> Bool in
-//                    return info.key == fullName
-//                    }).values.first
-//                self.fileWrapper.removeFileWrapper(deleteFile!)
-//            }
-//
-//            self.fileWrapper.addFileWrapper(newFileWrapper)
-//
-////            try data.write(to: cloudFileUrl)
-//
-////            try newFileWrapper.write(to: cloudFileUrl, options: FileWrapper.WritingOptions.withNameUpdating, originalContentsURL: originalUrl)
-//
-//            let doc = WRDocument.init(fileURL: URL(fileURLWithPath: self.path))
-//            doc.open { (success) in
-//                doc.rootFolder?.fileWrapper.addFileWrapper(newFileWrapper)
-//                doc.save(to: cloudFileUrl, for: UIDocument.SaveOperation.forCreating) { (success) in
-////                    doc.close(completionHandler: nil)
-//                }
-//
-//            }
-//
-//
-////            WRCloudManager.shared.document?.save(to: cloudFileUrl, for: UIDocument.SaveOperation.forCreating, completionHandler: nil)
-////            WRCloudManager.shared.document?.save(to: cloudFileUrl, for: UIDocument.SaveOperation.forCreating, completionHandler: { (success) in
-////
-////            })
-//
-////
-////            WRCloudManager.shared.close()
-////            WRCloudManager.shared.document?.updateChangeCount(.done)
-////            WRCloudManager.shared.document?.save(to: cloudFileUrl, for: UIDocument.SaveOperation.forOverwriting, completionHandler: { (finished) in
-////
-////            })
-//
-//        } catch let error as NSError {
-//            debugPrint(error)
-//        }
-        
-    }
 }
 
 //MARK: -
 fileprivate typealias WRCloudFolder_Public = WRCloudFolder
 public extension WRCloudFolder_Public {
-    func save(folder name: String) {        
-        guard !self.isExist(resource: name) else {
-            return
-        }
-        
-        let cloudFolderUrl = url.appendingPathComponent(name)
-        let folderWrapper = FileWrapper.init(directoryWithFileWrappers: [:])
-        folderWrapper.preferredFilename = name
-        fileWrapper.addFileWrapper(folderWrapper)
+    var isRoot: Bool {
+        return folder == nil
+    }
 
-        do {
-            try folderWrapper.write(to: cloudFolderUrl, options: FileWrapper.WritingOptions.withNameUpdating, originalContentsURL: nil)
-        } catch let error as NSError {
-            debugPrint(error)
+    var resources: [Any]? {
+        return contents.map { (resource) -> Any in
+            if let folder = resource as? WRCloudFolder {
+                return folder
+            } else if let file = resource as? WRCloudFile {
+                return file.url
+            }
+            return url
         }
-
+    }
+    
+    var waitingResources: [Any]? {
+        return waitingContents.map { (resource) -> Any in
+            if let folder = resource as? WRCloudFolder {
+                return folder
+            } else if let file = resource as? WRCloudFile {
+                return file.url
+            }
+            return url
+        }
     }
 }
-
 //MARK: -
 fileprivate typealias WRCloudFolder_Internal = WRCloudFolder
 internal extension WRCloudFolder_Internal {
@@ -192,23 +117,76 @@ internal extension WRCloudFolder_Internal {
         }
     }
 
-}
-
-//MARK: -
-fileprivate typealias WRCloudFolder_Private = WRCloudFolder
-private extension WRCloudFolder_Private {
-    
-    func isExist(resource name: String) -> Bool {
+    func isExist(resource name: String, isFolder: Bool) -> Bool {
         let folders = contents.filter { (object) -> Bool in
             if let folder = object as? WRCloudFolder {
-                return folder.name == name
+                return (folder.name == name && folder.fileWrapper.isDirectory == isFolder)
             } else if let file = object as? WRCloudFile {
-                return file.fullName == name
+                return (file.fullName == name && file.fileWrapper.isRegularFile == !isFolder)
             }
             return false
         }
         return folders.count != 0
     }
+    
+    func save(folder name: String) {
+        guard !self.isExist(resource: name, isFolder: true) else {
+            return
+        }
+        
+        let cloudFolderUrl = url.appendingPathComponent(name)
+        let folderWrapper = FileWrapper.init(directoryWithFileWrappers: [:])
+        folderWrapper.preferredFilename = name
+        fileWrapper.addFileWrapper(folderWrapper)
+
+        do {
+            try folderWrapper.write(to: cloudFolderUrl, options: FileWrapper.WritingOptions.withNameUpdating, originalContentsURL: nil)
+        } catch let error as NSError {
+            debugPrint(error)
+        }
+    }
+    
+    func save(file url: URL) {
+      
+        guard url.path.count > 0 else {
+            return
+        }
+
+        let fileFullName = (url.path as NSString).lastPathComponent
+
+        do {
+            let fileData: Data = try Data.init(contentsOf: url)
+            let cloudUrl = self.url.appendingPathComponent(fileFullName)
+            
+            let newFileWrapper = FileWrapper.init(regularFileWithContents: fileData)
+            newFileWrapper.preferredFilename = fileFullName
+            fileWrapper.addFileWrapper(newFileWrapper)
+            
+            if self.isExist(resource: fileFullName, isFolder: false)
+            {
+                let deleteFile = fileWrapper.fileWrappers?.filter({ (info) -> Bool in
+                    return info.key == fileFullName
+                    }).values.first
+                fileWrapper.removeFileWrapper(deleteFile!)
+            }
+
+            try newFileWrapper.write(to: cloudUrl, options: FileWrapper.WritingOptions.withNameUpdating, originalContentsURL: url)
+            
+            let newFile = WRCloudFile.init(url, file: newFileWrapper, superFolder: self)
+            contents.append(newFile)
+            
+            
+        } catch let error {
+            debugPrint(error)
+        }
+
+    }
+
+}
+
+//MARK: -
+fileprivate typealias WRCloudFolder_Private = WRCloudFolder
+private extension WRCloudFolder_Private {
 
     func addContent(_ content: Any) {
         switch content.self {

@@ -60,10 +60,6 @@ public class WRCloudManager: NSObject {
         }
         return _document
     }
-    
-    private let GCD_semaphore = DispatchSemaphore.init(value: 0)
-    private let GCD_queue_group = DispatchGroup.init()
-
 }
 
 //MARK:-
@@ -101,86 +97,94 @@ private extension WRCloudManager_Private {
         return success
     }
     
+    // 创建文件夹
+    @discardableResult
+    static func create(folder name: String, super folder: WRCloudFolder) -> WRCloudFolder? {
+        if folder.isExist(resource: name, isFolder: true)
+        {
+            return folder.contents.first { (resource) -> Bool in
+                if let subFolder = resource as? WRCloudFolder {
+                    return subFolder.name == name
+                }
+                return false
+            } as? WRCloudFolder
+        }
+
+        let newFolder = FileWrapper.init(directoryWithFileWrappers: [:])
+        newFolder.preferredFilename = name
+        folder.fileWrapper.addFileWrapper(newFolder)
+        
+        let cloudUrl = folder.url.appendingPathComponent(name)
+        
+        do
+        {
+            try newFolder.write(to: cloudUrl, options: FileWrapper.WritingOptions.withNameUpdating, originalContentsURL: nil)
+        }
+        catch let error as NSError
+        {
+            debugPrint(error)
+        }
+        
+        return WRCloudFolder.init(cloudUrl, file: newFolder, superFolder: folder)
+    }
+
+    // 创建层级文件夹
+    @discardableResult
+    static func create(folder names:[String], super folder: WRCloudFolder) -> WRCloudFolder {
+        var index = 0
+        var superFolder = folder
+        
+        while index < names.count {
+            let name = names[index]
+            index += 1
+            
+            superFolder = self.create(folder: name, super: superFolder)!
+        }
+        
+        return superFolder
+    }
+    
 }
 
 //MARK:-
 fileprivate typealias WRCloudManager_Public = WRCloudManager
 public extension WRCloudManager_Public {
-    func create(folder name: String, superFolder: WRCloudFolder? = nil) {
-        DispatchQueue.global().async(group: GCD_queue_group, execute: DispatchWorkItem.init(block: { [weak self] in
-            guard let `self` = self else {
-                return
+    /**创建文件夹*/
+    /**
+    创建文件夹，superFolder是父文件夹字符串描述
+    */
+    /// - parameter name: 文件夹名
+    /// - parameter superFolder: 父文件夹名。e.g. Image/Avatar/Mine、Image、nil
+    static func create(folder name: String, super folder: String?) {
+        guard let url = WRCloudManager.shared.path.root else {
+            return
+        }
+        let document = WRDocument.init(fileURL: url)
+        document.open { (success) in
+            if success
+            {
+                if let rootFolder = document.rootFolder
+                {
+                    // 无父文件夹名，创建在根目录下
+                    guard let superFolderName = folder else
+                    {
+                        self.create(folder: name, super: rootFolder)
+                        return
+                    }
+                    
+                    let superFolderNames: [String] = superFolderName.split(separator: "/").compactMap { "\($0)" }
+                    let superFolder = self.create(folder: superFolderNames, super: rootFolder)
+                    self.create(folder: name, super: superFolder)
+                }
             }
-            self.GCD_semaphore.wait()
-
-            let targetFolder = superFolder == nil ? WRCloudManager.shared.document?.rootFolder : superFolder
-            guard let folder = targetFolder else {
-                return
-            }
-            
-            folder.save(folder: name)
-        }))
-    }
-    
-    func save(_ filePath: String?, _ folder: WRCloudFolder? = nil) {
-//        guard let path = filePath else {
-//            return
-//        }
-//        let originalUrl = URL(fileURLWithPath: path)
-//        let fullName = (path as NSString).lastPathComponent
-//        let cloudFolderUrl = self.path.root!.appendingPathComponent((fullName as NSString).deletingPathExtension)
-//        let cloudFileUrl = cloudFolderUrl.appendingPathComponent(fullName)
-//
-//        let doc = WRDocument.init(fileURL: cloudFolderUrl)
-////        let folder = FileWrapper.init(directoryWithFileWrappers: [:])
-////        folder.preferredFilename = (fullName as NSString).deletingPathExtension
-//        
-//        
-//        doc.open { (success) in
-//            if success {
-//                do {
-//                    let data = try Data.init(contentsOf: originalUrl)
-//                    let fileWrapper = FileWrapper.init(regularFileWithContents: data)
-//                    fileWrapper.preferredFilename = fullName
-//                    fileWrapper.filename = fullName
-////                    folder.addFileWrapper(fileWrapper)
-//                    doc.rootFolder?.fileWrapper.addFileWrapper(fileWrapper)
-//
-//                    doc.save(to: cloudFolderUrl, for: UIDocument.SaveOperation.forCreating, completionHandler: { (success) in
-//                        doc.close(completionHandler: nil)
-//                    })
-//
-//                } catch let error {
-//                    print("save error = \(error)")
-//                }
-//
-//                
-//            }
-//        }
-//        DispatchQueue.global().async(group: GCD_queue_group, execute: DispatchWorkItem.init(block: { [weak self] in
-//            guard let `self` = self else
-//            {
-//                return
-//            }
-//            self.GCD_semaphore.wait()
-//
-//            guard let path = filePath, (path as NSString).lastPathComponent.count > 0 else
-//            {
-//                return
-//            }
-//
-//            let superFolder = folder == nil ? WRCloudManager.shared.document?.rootFolder : folder
-//            guard let targetFolder = superFolder else {
-//                self.delegate?.cloudManager(self, catch: .folderNotExist)
-//                return
-//            }
-//
-//            targetFolder.save(file: path)
-//        }))
+        }
     }
     
     static func open(root complete:@escaping (WRCloudFolder?) -> ()) {
-        let rootDocument = WRDocument.init(fileURL: WRCloudManager.shared.path.root!)
+        guard let url = WRCloudManager.shared.path.root else {
+            return
+        }
+        let rootDocument = WRDocument.init(fileURL: url)
         rootDocument.open { (success) in
             if success
             {
@@ -190,45 +194,33 @@ public extension WRCloudManager_Public {
         WRCloudManager.shared._document = rootDocument
     }
     
-    func open()
-    {
-//        DispatchQueue.global().async(group: GCD_queue_group, execute: DispatchWorkItem.init(block: { [weak self] in
-//            guard let `self` = self, let document = self.document else {
-//                return
-//            }
-//
-//            document.open { (finished) in
-//                DispatchQueue.main.sync { [weak self]  in
-//                    if let `self` = self
-//                    {
-//                        self.delegate?.cloudManager(openSuccess: self)
-//                    }
-//                }
-//
-//                document.enableEditing()
-////                document.updateChangeCount(.done)
-////                document.close(completionHandler: nil)
-//                self.GCD_semaphore.signal()
-//            }
-//        }))
+    /**保存文件*/
+    /**
+    保存文件
+    */
+    /// - parameter name: 文件名
+    /// - parameter folderName: 父文件夹名。e.g. Image/Avatar/Mine、Image、nil
+    static func save(file url: URL, folderName: String? = nil) {
+        open { (folder) in
+            guard let rootFolder = folder else {
+                return
+            }
+            var superFolder = rootFolder
+            if let superFolderName = folderName
+            {
+                superFolder = create(folder: superFolderName.split(separator: "/").compactMap({ "\($0)" }), super: superFolder)
+            }
+            
+            superFolder.save(file: url)
+            
+        }
     }
     
-    func close() {
-//        DispatchQueue.global().async(group: GCD_queue_group, execute: DispatchWorkItem.init(block: { [weak self] in
-//            guard let `self` = self, let document = self.document else {
-//                return
-//            }
-//
-////            self.GCD_semaphore.wait()
-//            document.close { (finished) in
-//                
-//            }
-//        }))
-    }
 }
+
 //MARK:-
 fileprivate typealias WRCloudManager_Document = WRCloudManager
-public extension WRCloudManager_Document {
+private extension WRCloudManager_Document {
     @objc func notification_documentStateChanged(_ notification: Notification) {
         if let document = notification.object as? WRDocument {
             debugPrint("documentState = \(document.documentState)")

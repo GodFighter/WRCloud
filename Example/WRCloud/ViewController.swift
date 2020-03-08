@@ -16,11 +16,20 @@ class ViewController: UIViewController, WRCloudManagerDelegate {
 
         WRCloudManager.shared.delegate = self
         
-//        WRCloudManager.shared.d
+//        let filePath = Bundle.main.path(forResource: "README", ofType: "jpg")
+//        WRCloudManager.save(file: URL(fileURLWithPath: filePath!))
+//        WRCloudManager.save(file: URL(fileURLWithPath: filePath!), folderName: "Image/Avatar")
         
-//        WRCloudManager.open { (folder) in
-//
-//        }
+//        WRCloudManager.create(folder: "Ren", super: "Xiang/Hui/Wu")
+//        
+//        WRCloudManager.create(folder: "Xiang", super: nil)
+                
+        WRCloudManager.open { (folder) in
+            for resource in (folder?.resources)! {
+                print("resource = ", resource)
+
+            }
+        }
         
 //        WRCloudManager.shared.open()
 //        WRCloudManager.shared.create(folder: "Image")
@@ -64,7 +73,7 @@ extension ViewController_WRCloudManagerDelegate {
     }
     
     func cloudManager(_ manager: WRCloudManager, catch error: WRCloudManager.WRCloudError) {
-        
+        debugPrint("WRCloudManager error = \(error)")
     }
 }
 
