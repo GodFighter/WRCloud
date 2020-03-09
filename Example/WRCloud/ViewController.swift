@@ -16,43 +16,17 @@ class ViewController: UIViewController, WRCloudManagerDelegate {
 
         WRCloudManager.shared.delegate = self
         
-//        let filePath = Bundle.main.path(forResource: "README", ofType: "jpg")
-//        WRCloudManager.save(file: URL(fileURLWithPath: filePath!))
-//        WRCloudManager.save(file: URL(fileURLWithPath: filePath!), folderName: "Image/Avatar")
-        
-//        WRCloudManager.create(folder: "Ren", super: "Xiang/Hui/Wu")
-//        
-//        WRCloudManager.create(folder: "Xiang", super: nil)
-                
-        WRCloudManager.open { (folder) in
-            for resource in (folder?.resources)! {
-                print("resource = ", resource)
-
-            }
-        }
-        
-//        WRCloudManager.shared.open()
-//        WRCloudManager.shared.create(folder: "Image")
-//        let filePath = Bundle.main.path(forResource: "README", ofType: "jpg")
-//        WRCloudManager.shared.save(filePath)
-        
-//        let doc = WRDocument.init(fileURL: WRCloudManager.shared.path.root!)
-//        doc.open { (success) in
-//            if success {
-//                if let url = WRCloudManager.shared.path.root?.appendingPathComponent("README/README.md") {
-//                    do {
-//                        let data = try Data(contentsOf: url)
-//                        let string = String(data: data, encoding: .utf8)
-//                        print(string as Any)
-//                    } catch let error {
-//                        print(error)
-//                    }
-//
-//                }
+//        WRCloudManager.open { (folder) in
+//            guard let rootFolder = folder else {
+//                return
 //            }
+//            print(rootFolder.contents)
 //        }
-        
-        
+
+        let filePath = Bundle.main.path(forResource: "README", ofType: "md")
+//        WRCloudManager.save(file: URL(fileURLWithPath: filePath!))
+        WRCloudManager.save(file: URL(fileURLWithPath: filePath!), folderName: "Image")
+
         
     }
 
@@ -66,14 +40,16 @@ class ViewController: UIViewController, WRCloudManagerDelegate {
 //MARK:-
 fileprivate typealias ViewController_WRCloudManagerDelegate = ViewController
 extension ViewController_WRCloudManagerDelegate {
-    func cloudManager(openSuccess manager: WRCloudManager) {
-//        let filePath = Bundle.main.path(forResource: "README", ofType: "md")
-//        WRCloudManager.shared.save(filePath)
-//        WRCloudManager.shared.create(folder: "Image")
+    func cloudManager(_ manager: WRCloudManager, open folder: WRCloudFolder) {
+        debugPrint("WRCloudManager open success)")
+}
+    
+    func cloudManager(_ manager: WRCloudManager, catch error: Error, code: WRCloudManager.WRCloudError) {
+        debugPrint("WRCloudManager error = \(error)")
     }
     
-    func cloudManager(_ manager: WRCloudManager, catch error: WRCloudManager.WRCloudError) {
-        debugPrint("WRCloudManager error = \(error)")
+    func cloudManager(_ manager: WRCloudManager, saveFile name: String) {
+        debugPrint("WRCloudManager save file success)")
     }
 }
 

@@ -9,8 +9,9 @@
 import UIKit
 
 public protocol WRCloudManagerDelegate: class {
-    func cloudManager(_ manager: WRCloudManager, catch error:WRCloudManager.WRCloudError)
-    func cloudManager(openSuccess manager: WRCloudManager)
+    func cloudManager(_ manager: WRCloudManager, catch error: Error, code: WRCloudManager.WRCloudError)
+    func cloudManager(_ manager: WRCloudManager, open folder: WRCloudFolder)
+    func cloudManager(_ manager: WRCloudManager, saveFile name: String)
 }
 
 public class WRCloudManager: NSObject {
@@ -20,15 +21,15 @@ public class WRCloudManager: NSObject {
     public enum WRCloudError: Error {
         /** 权限错误 */
         case permissionFailure
-        case createFolderFailure
-        case fileNotExist
+        case fileSaveFailure
+        case fileDownloadFailure
         case folderIsExist
-        case folderNotExist
+        case folderCreateFailure
     }
 
     class Path {
         var root: URL? {
-            if !WRCloudManager.shared.isAvailable {
+            if !WRCloudManager.isAvailable {
                 return nil
             }
             guard let cloudDocumentsURL = FileManager.default.url(forUbiquityContainerIdentifier: nil)?.appendingPathComponent("Documents") else {
@@ -65,16 +66,6 @@ public class WRCloudManager: NSObject {
 //MARK:-
 fileprivate typealias WRCloudManager_Private = WRCloudManager
 private extension WRCloudManager_Private {
-    var isAvailable: Bool {
-        do {
-            try WRCloudManager.shared.permission()
-        } catch {
-            delegate?.cloudManager(WRCloudManager.shared, catch: .permissionFailure)
-            return false
-        }
-        return true
-    }
-    
     func permission() throws{
         if FileManager.default.url(forUbiquityContainerIdentifier: nil)?.appendingPathComponent("Documents") != nil {
             return
@@ -90,8 +81,8 @@ private extension WRCloudManager_Private {
         var success = true
         do {
             try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true, attributes: nil)
-        } catch {
-            WRCloudManager.shared.delegate?.cloudManager(WRCloudManager.shared, catch: .createFolderFailure)
+        } catch let error {
+            WRCloudManager.shared.delegate?.cloudManager(WRCloudManager.shared, catch: error, code: .folderCreateFailure)
             success = false
         }
         return success
@@ -99,7 +90,7 @@ private extension WRCloudManager_Private {
     
     // 创建文件夹
     @discardableResult
-    static func create(folder name: String, super folder: WRCloudFolder) -> WRCloudFolder? {
+    static func create(folder name: String, super folder: WRCloudFolder) -> WRCloudFolder {
         if folder.isExist(resource: name, isFolder: true)
         {
             return folder.contents.first { (resource) -> Bool in
@@ -107,7 +98,7 @@ private extension WRCloudManager_Private {
                     return subFolder.name == name
                 }
                 return false
-            } as? WRCloudFolder
+                } as! WRCloudFolder
         }
 
         let newFolder = FileWrapper.init(directoryWithFileWrappers: [:])
@@ -138,7 +129,7 @@ private extension WRCloudManager_Private {
             let name = names[index]
             index += 1
             
-            superFolder = self.create(folder: name, super: superFolder)!
+            superFolder = self.create(folder: name, super: superFolder)
         }
         
         return superFolder
@@ -149,13 +140,25 @@ private extension WRCloudManager_Private {
 //MARK:-
 fileprivate typealias WRCloudManager_Public = WRCloudManager
 public extension WRCloudManager_Public {
+    
+    /**获取云盘可用状态*/
+    static var isAvailable: Bool {
+        do {
+            try WRCloudManager.shared.permission()
+        } catch let error {
+            WRCloudManager.shared.delegate?.cloudManager(WRCloudManager.shared, catch: error, code: .permissionFailure)
+            return false
+        }
+        return true
+    }
     /**创建文件夹*/
     /**
     创建文件夹，superFolder是父文件夹字符串描述
     */
     /// - parameter name: 文件夹名
     /// - parameter superFolder: 父文件夹名。e.g. Image/Avatar/Mine、Image、nil
-    static func create(folder name: String, super folder: String?) {
+    static func create(folder name: String, super folder: String?)
+    {
         guard let url = WRCloudManager.shared.path.root else {
             return
         }
@@ -180,7 +183,13 @@ public extension WRCloudManager_Public {
         }
     }
     
-    static func open(root complete:@escaping (WRCloudFolder?) -> ()) {
+    /**打开云盘根目录*/
+    /// - parameter complete: 完成block
+    /**
+    返回根目录文件夹对象
+    */
+    static func open(root complete:@escaping (WRCloudFolder?) -> ())
+    {
         guard let url = WRCloudManager.shared.path.root else {
             return
         }
@@ -200,7 +209,8 @@ public extension WRCloudManager_Public {
     */
     /// - parameter name: 文件名
     /// - parameter folderName: 父文件夹名。e.g. Image/Avatar/Mine、Image、nil
-    static func save(file url: URL, folderName: String? = nil) {
+    static func save(file url: URL, folderName: String? = nil)
+    {
         open { (folder) in
             guard let rootFolder = folder else {
                 return
@@ -216,6 +226,19 @@ public extension WRCloudManager_Public {
         }
     }
     
+    /** 下载未下载资源 */
+    /// - parameter folder: 文件夹
+    static func download(_ folder: WRCloudFolder? = nil)
+    {
+        if let targetFolder = folder {
+            targetFolder.download()
+        } else {
+            open { (rootFolder) in
+                rootFolder?.download()
+            }
+        }
+    }
+    
 }
 
 //MARK:-
@@ -226,7 +249,9 @@ private extension WRCloudManager_Document {
             debugPrint("documentState = \(document.documentState)")
             switch document.documentState {
             case .progressAvailable:
-                debugPrint("documentProgress = \(String(describing: document.progress))")
+                if #available(iOS 9.0, *) {
+                    debugPrint("documentProgress = \(String(describing: document.progress))")
+                }
             default:break
             }
         }

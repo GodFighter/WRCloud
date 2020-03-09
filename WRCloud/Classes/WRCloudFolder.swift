@@ -11,20 +11,20 @@ import UIKit
 private let WRCloudResourceName = ".icloud"
 
 //MARK:-
-class WRCloudFile {
-    var name: String
-    var fullName: String
-    var url: URL
-    var type: String
-    var fileWrapper : FileWrapper
+public class WRCloudFile {
+    public var name: String
+    public var fullName: String
+    public var url: URL
+    public var fileExtension: String
+    public var fileWrapper : FileWrapper
     
-    weak var folder: WRCloudFolder? = nil
+    public weak var folder: WRCloudFolder? = nil
 
     init(_ url: URL, file: FileWrapper, superFolder: WRCloudFolder?) {
         self.url = url
         self.fullName = (url.path as NSString).lastPathComponent
         self.name = (fullName as NSString).deletingPathExtension
-        self.type = (url.path as NSString).pathExtension
+        self.fileExtension = (url.path as NSString).pathExtension
         self.fileWrapper = file
         self.folder = superFolder
     }
@@ -32,14 +32,14 @@ class WRCloudFile {
 
 //MARK:-
 public class WRCloudFolder {
-    var name: String
+    public var name: String
     public var url: URL
-    var fileWrapper : FileWrapper
+    public var fileWrapper : FileWrapper
     
-    var contents: [Any] = []        //内容数组
-    var waitingContents: [Any] = []  // 等待更新内容数组
+    public fileprivate(set) var contents: [Any] = []        //内容数组
+    public fileprivate(set) var waitingContents: [Any] = []  // 等待更新内容数组
 
-    weak var folder: WRCloudFolder? = nil
+    public weak var folder: WRCloudFolder? = nil
     
     init(_ url: URL, file: FileWrapper, superFolder: WRCloudFolder?) {
         self.url = url
@@ -55,28 +55,6 @@ fileprivate typealias WRCloudFolder_Public = WRCloudFolder
 public extension WRCloudFolder_Public {
     var isRoot: Bool {
         return folder == nil
-    }
-
-    var resources: [Any]? {
-        return contents.map { (resource) -> Any in
-            if let folder = resource as? WRCloudFolder {
-                return folder
-            } else if let file = resource as? WRCloudFile {
-                return file.url
-            }
-            return url
-        }
-    }
-    
-    var waitingResources: [Any]? {
-        return waitingContents.map { (resource) -> Any in
-            if let folder = resource as? WRCloudFolder {
-                return folder
-            } else if let file = resource as? WRCloudFile {
-                return file.url
-            }
-            return url
-        }
     }
 }
 //MARK: -
@@ -131,6 +109,7 @@ internal extension WRCloudFolder_Internal {
     
     func save(folder name: String) {
         guard !self.isExist(resource: name, isFolder: true) else {
+            WRCloudManager.shared.delegate?.cloudManager(WRCloudManager.shared, catch: NSError.init(domain: "文件夹已存在", code: -1, userInfo: nil), code: WRCloudManager.WRCloudError.folderIsExist)
             return
         }
         
@@ -142,12 +121,12 @@ internal extension WRCloudFolder_Internal {
         do {
             try folderWrapper.write(to: cloudFolderUrl, options: FileWrapper.WritingOptions.withNameUpdating, originalContentsURL: nil)
         } catch let error as NSError {
-            debugPrint(error)
+            WRCloudManager.shared.delegate?.cloudManager(WRCloudManager.shared, catch: error, code: .folderCreateFailure)
         }
     }
     
-    func save(file url: URL) {
-      
+    func save(file url: URL)
+    {
         guard url.path.count > 0 else {
             return
         }
@@ -174,14 +153,26 @@ internal extension WRCloudFolder_Internal {
             
             let newFile = WRCloudFile.init(url, file: newFileWrapper, superFolder: self)
             contents.append(newFile)
-            
-            
-        } catch let error {
-            debugPrint(error)
-        }
+            WRCloudManager.shared.delegate?.cloudManager(WRCloudManager.shared, saveFile: fileFullName)
 
+        } catch let error {
+            WRCloudManager.shared.delegate?.cloudManager(WRCloudManager.shared, catch: error, code: WRCloudManager.WRCloudError.fileSaveFailure)
+        }
     }
 
+    func download()
+    {
+        waitingContents.forEach { (resource) in
+            if let file = resource as? WRCloudFile
+            {
+                do {
+                    try FileManager.default.startDownloadingUbiquitousItem(at: file.url)
+                } catch let error {
+                    WRCloudManager.shared.delegate?.cloudManager(WRCloudManager.shared, catch: error, code: .fileDownloadFailure)
+                }
+            }
+        }
+    }
 }
 
 //MARK: -
@@ -226,18 +217,6 @@ private extension WRCloudFolder_Private {
             }
 
         default: break
-        }
-    }
-
-    func download() {
-        waitingContents.forEach { (resource) in
-            if let file = resource as? WRCloudFile {
-                do {
-                    try FileManager.default.startDownloadingUbiquitousItem(at: file.url)
-                } catch let error {
-                    debugPrint(error)
-                }
-            }
         }
     }
 

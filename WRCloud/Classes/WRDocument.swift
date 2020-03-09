@@ -29,6 +29,9 @@ class WRDocument: UIDocument {
         }
         
         rootFolder?.parse(fileWrapper)
+        if let folder = rootFolder {
+            WRCloudManager.shared.delegate?.cloudManager(WRCloudManager.shared, open: folder)
+        }
     }
     
     override func handleError(_ error: Error, userInteractionPermitted: Bool) {
